@@ -1,117 +1,316 @@
-[![Syncthing][14]][15]
+![CloudBees Feature Management](https://1ko9923xosh2dsbjsxpwqp45-wpengine.netdna-ssl.com/wp-content/themes/rollout/images/rollout_white_logo1.png)
 
----
+[![Integration status](https://app.rollout.io/badges/62fca51099298c6d9cf84ca9)](https://app.rollout.io/app/62fca46f99298c6d9cf80b6d/settings/info)
 
-[![Latest Linux & Cross Build](https://img.shields.io/teamcity/https/build.syncthing.net/s/Syncthing_BuildLinuxCross.svg?style=flat-square&label=linux+%26+cross+build)](https://build.syncthing.net/viewType.html?buildTypeId=Syncthing_BuildLinuxCross&guest=1)
-[![Latest Windows Build](https://img.shields.io/teamcity/https/build.syncthing.net/s/Syncthing_BuildWindows.svg?style=flat-square&label=windows+build)](https://build.syncthing.net/viewType.html?buildTypeId=Syncthing_BuildWindows&guest=1)
-[![Latest Mac Build](https://img.shields.io/teamcity/https/build.syncthing.net/s/Syncthing_BuildMac.svg?style=flat-square&label=mac+build)](https://build.syncthing.net/viewType.html?buildTypeId=Syncthing_BuildMac&guest=1)
-[![MPLv2 License](https://img.shields.io/badge/license-MPLv2-blue.svg?style=flat-square)](https://www.mozilla.org/MPL/2.0/)
-[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/88/badge)](https://bestpractices.coreinfrastructure.org/projects/88)
-[![Go Report Card](https://goreportcard.com/badge/github.com/syncthing/syncthing)](https://goreportcard.com/report/github.com/syncthing/syncthing)
+This repository is a YAML represnetation for Rollout configuration, it is connected (see badge for status) to Rollout service via [Rollout's github app](https://github.com/apps/rollout-io)
+Configuration as code allows the entire configuration of Rollout's state to be stored as source code. It integrates Rollout's UI with engineering existing environment. This approach brings a lot of benefits.
 
-## Goals
 
-Syncthing is a **continuous file synchronization program**. It synchronizes
-files between two or more computers. We strive to fulfill the goals below.
-The goals are listed in order of importance, the most important one being
-the first. This is the summary version of the goal list - for more
-commentary, see the full [Goals document][13].
+# What is Rollout
+Rollout is a multi-platform, infrastructure as code, software as a service feature management and remote configuration solution.
 
-Syncthing should be:
+# What Are Feature Flags
 
-1. **Safe From Data Loss**
+Feature Flags is a powerfull technique based on remotetly and conditionaly opening/closing features threw the entire feature developement and delivery process.  As Martin Fowler writes on [Feature Toggles (aka Feature Flags)](https://martinfowler.com/articles/feature-toggles.html)
 
-   Protecting the user's data is paramount. We take every reasonable
-   precaution to avoid corrupting the user's files.
+> Feature Toggles (often also refered to as Feature Flags) are a powerful technique, allowing teams to modify system behavior without changing code. They fall into various usage categories, and it's important to take that categorization into account when implementing and managing toggles. Toggles introduce complexity. We can keep that complexity in check by using smart toggle implementation practices and appropriate tools to manage our toggle configuration, but we should also aim to constrain the number of toggles in our system.
 
-2. **Secure Against Attackers**
+You can read more about the Advantages of having Rollout configuration stored and treated as code in [Rollout's support doc](https://support.rollout.io/docs/configuration-as-code)
 
-   Again, protecting the user's data is paramount. Regardless of our other
-   goals we must never allow the user's data to be susceptible to
-   eavesdropping or modification by unauthorized parties.
 
-3. **Easy to Use**
+# Repository, Directories and YAML structure
+## Branches are Environments
 
-   Syncthing should be approachable, understandable and inclusive.
+Every environment on Rollout dashboard is mapped to a branch in git. The same name that is used for the environment will be used for the branch name. The only exception being Production environment which is mapped to `master` branch
 
-4. **Automatic**
+## Directory structure
 
-   User interaction should be required only when absolutely necessary.
+Rollout repository integration creates the following directory structure:
+```
+.
+├── experiments             # Experiments definitions
+│   └──  archived           # Archived experiments definitions
+├── target_groups           # Target groups definitions
+└── README.md
+```
 
-5. **Universally Available**
+- All experiments are located under the experiment folder
+- All archived experiments are located under the `experiments/archived` folder
 
-   Syncthing should run on every common computer. We are mindful that the
-   latest technology is not always available to any given individual.
+## Experiment Examples
 
-6. **For Individuals**
+### False for all users
+```yaml
+flag: default.followingView
+type: experiment
+name: following view
+value: false
+```
+This YAML representation in Rollout's dashboard:
+![dashboard](https://files.readme.io/00b37e6-Screen_Shot_2018-12-03_at_11.47.56.png)
+### 50% split
+```yaml
+flag: default.followingView
+type: experiment
+name: following view
+value:
+  - option: true
+    percentage: 50
+```
+This YAML representation in Rollout's dashboard:
+![dashboard](https://files.readme.io/5af4d9e-Screen_Shot_2018-12-03_at_12.01.28.png)
+### Open feature for QA and Beta Users on version 3.0.1, otherwise close it
+```yaml
+flag: default.followingView
+type: experiment
+name: following view
+conditions:
+  - group:
+      name:
+        - QA
+        - Beta Users
+    version:
+      operator: semver-gte
+      semver: 3.0.1
+    value: true
+value: false
+```
+This YAML representation in Rollout's dashboard:
+![dashboard](https://files.readme.io/6884476-Screen_Shot_2018-12-03_at_12.04.13.png)
+### Open feature for all platform beside Android
+```yaml
+flag: default.followingView
+type: experiment
+name: following view
+platforms:
+  - name: Android
+    value: false
+value: true
+```
+Dashboard default platfrom configuration:
+![dashboard](https://files.readme.io/461c854-Screen_Shot_2018-12-04_at_10.19.59.png)
+Dashboard Android configuration:
+![dashboard](https://files.readme.io/1aafd04-Screen_Shot_2018-12-03_at_21.39.52.png)
+## Experiment YAML
 
-   Syncthing is primarily about empowering the individual user with safe,
-   secure and easy to use file synchronization.
+This section describes the yaml scheme for an experiment. It is a composite of 3 schemas:
 
-7. **Everything Else**
 
-   There are many things we care about that don't make it on to the list. It
-   is fine to optimize for these values, as long as they are not in conflict
-   with the stated goals above.
+-  [Root schema ](doc:configuration-as-code#section-root-schema)  - the base schema for experiment
+-  [Splited Value schema](doc:configuration-as-code#section-splitedvalue-schema)  - Represents a splited value -  a value that is distributed among different instances based on percentage
+-  [Scheduled Value schema](doc:configuration-as-code#section-scheduledvalue-schema)  - Represents a scheduled value -  a value that is based on the time that the flag was evaluated
+-  [Condition schema](doc:configuration-as-code#section-condition-schema)  - Specify how to target a specific audience/device
+-  [Platform schema](doc:configuration-as-code#section-platform-schema)  - Specify how to target a specific platform
 
-## Getting Started
 
-Take a look at the [getting started guide][2].
 
-There are a few examples for keeping Syncthing running in the background
-on your system in [the etc directory][3]. There are also several [GUI
-implementations][11] for Windows, Mac and Linux.
+### Root Schema
+An Experiment controls the flag value in runtime:
 
-## Docker
+```yaml
+# Yaml api version
+# Optional: defaults to "1.0.0"
+version: Semver
 
-To run Syncthing in Docker, see [the Docker README][16].
+# Yaml Type (required)
+type: "experiment"
 
-## Vote on features/bugs
+# The flag being controlled by this experiment (required)
+flag: String
 
-We'd like to encourage you to [vote][12] on issues that matter to you.
-This helps the team understand what are the biggest pain points for our users, and could potentially influence what is being worked on next.
+# The available values that this flag can be
+# Optional=[false, true]
+availableValues: [String|Bool]
 
-## Getting in Touch
+# The name of the experiment
+# Optional: default flag name
+name: String
 
-The first and best point of contact is the [Forum][8].
-If you've found something that is clearly a
-bug, feel free to report it in the [GitHub issue tracker][10].
+# The Description of the experiment
+# Optional=""
+description: String
 
-## Building
+# Indicates if the experiment is active
+# Optional=true
+enabled: Boolean
 
-Building Syncthing from source is easy. After extracting the source bundle from
-a release or checking out git, you just need to run `go run build.go` and the
-binaries are created in `./bin`. There's [a guide][5] with more details on the
-build process.
+# Expriment lables
+# Optional=[]
+labels: [String]|String
 
-## Signed Releases
+# Stickiness property that controls percentage based tossing
+# Optional="rox.distict_id"
+stickinessProperty: String
 
-As of v0.10.15 and onwards release binaries are GPG signed with the key
-D26E6ED000654A3E, available from https://syncthing.net/security.html and
-most key servers.
+# Platfrom explicit targeting
+# Optional=[]
+platforms: [Platfrom]  # see Platfrom schema
 
-There is also a built in automatic upgrade mechanism (disabled in some
-distribution channels) which uses a compiled in ECDSA signature. macOS
-binaries are also properly code signed.
+# Condition and values for default platfomr
+# Optional=[]
+conditions: [Condition] # see Condition schema
 
-## Documentation
+# Value when no Condition is met
+# Optional
+#  false for boolean flags
+#  null for enum flags  (indicates default value)
+value: String|Boolean|[SplitedValue]|[ScheduledValue]|null
+```
 
-Please see the Syncthing [documentation site][6] [[source]][17].
+### SplitedValue Schema
+```yaml
+# Percentage, used for splitting traffic across different values
+# Optional=100
+percentage: Number
 
-All code is licensed under the [MPLv2 License][7].
+# The Value to be delivered
+option: String|Boolean
+```
+### ScheduledValue Schema
+```yaml
+# The Date from which this value is relevant
+# Optional=undefined
+from: Date
 
-[1]: https://docs.syncthing.net/specs/bep-v1.html
-[2]: https://docs.syncthing.net/intro/getting-started.html
-[3]: https://github.com/syncthing/syncthing/blob/main/etc
-[5]: https://docs.syncthing.net/dev/building.html
-[6]: https://docs.syncthing.net/
-[7]: https://github.com/syncthing/syncthing/blob/main/LICENSE
-[8]: https://forum.syncthing.net/
-[10]: https://github.com/syncthing/syncthing/issues
-[11]: https://docs.syncthing.net/users/contrib.html#gui-wrappers
-[12]: https://www.bountysource.com/teams/syncthing/issues
-[13]: https://github.com/syncthing/syncthing/blob/main/GOALS.md
-[14]: assets/logo-text-128.png
-[15]: https://syncthing.net/
-[16]: https://github.com/syncthing/syncthing/blob/main/README-Docker.md
-[17]: https://github.com/syncthing/docs
+# Percentage, used for splitting traffic across different values
+# Optional=100
+percentage: Number
+```
+### Condition Schema
+
+The Condition is a pair of condition and value, an array of conditions can be viewed as an if-else statement by the order of conditions
+
+The schema contains three types of condition statements
+- Dependency - express flag dependencies, by indicating flag name and expected value
+- Groups - a list of target-groups and the operator that indicates the relationship between them (`or`|`and`|`not`)
+- Version -  comparing the version of
+[/block]
+The relationship between these items is `and`, meaning:
+       If the dependency is met `and` Groups matches `and` Version matches  `then` flage=value
+
+Here is the Condition schema
+```yaml
+# Condition this flag value with another flag value
+dependency:
+    # Flag Name
+    flag: String
+    # The expected Flag Value
+    value: String|Boolean
+
+# Condition flag value based on target group(s)
+group:
+    # The logical relationship between the groups
+    # Optional = or
+    operator: or|and|not
+
+    # Name of target groups
+    name: [String]|String
+
+# Condition flag value based release version
+version:
+    # The operator to compare version
+    operator: semver-gt|semver-gte|semver-eq|semver-ne|semver-lt|semver-lte
+
+    # The version to compare to
+    semver: Semver
+
+# Value when Condition is met
+value: String|Boolean|[SplitedValue]|[ScheduledValue]|null
+```
+### Platform Schema
+The platform object indicates a specific targeting for a specific platform
+
+```yaml
+# Name of the platform, as defined in the SDK running
+name: String
+
+# Override the flag name, when needed
+# Optional = experiment flag name
+flag: String
+
+# Condition and values for default platfomr
+# Optional=[]
+conditions: [Condition] # see Condition schema
+
+# Value when no Condition is met
+# Optional
+#  false for boolean flags
+#  null for enum flags  (indicates default value)
+value: String|Boolean|[SplitedValue]|[ScheduledValue]|null # see Value schema
+```
+
+
+## Target Group Examples
+### List of matching userid
+```yaml
+type: target-group
+name: QA
+conditions:
+  - operator: in-array
+    property: soundcloud_id
+    operand:
+      - 5c0588007cd291cca474454f
+      - 5c0588027cd291cca4744550
+      - 5c0588037cd291cca4744551
+      - 5c0588047cd291cca4744552
+      - 5c0588047cd291cca4744553
+```
+
+![dashboard](https://files.readme.io/7affbbe-Screen_Shot_2018-12-03_at_21.47.05.png)
+### Using number property for comparison
+
+```yaml
+type: target-group
+name: DJ
+conditions:
+  - operator: gte
+    property: playlist_count
+    operand: 100
+description: Users with a lot of playlists
+```
+
+On rollout Dashboard
+![dashboard](https://files.readme.io/dcb562f-Screen_Shot_2018-12-03_at_21.43.19.png)
+## Target Group YAML
+
+A Target group is a set of rules on top of custom properties that are defined in runtime, it is used in experiments conditions
+
+```yaml
+# Yaml api version
+# Optional: defaults to "1.0.0"
+version: Semver
+
+# Yaml Type (required)
+type: "target-group"
+
+#Target Group Name
+name: String
+
+# Target Group description
+# Optional = ""
+description: String
+
+# The logical relationship between conditions
+# Optional = and
+operator: or|and
+
+# Array of Conditions that have a logical AND relationship between them
+conditions:
+    # The Custom property to be conditioned (first operand)
+  - property: String
+
+    # The Operator of the confition
+    operator: is-undefined|is-true|is-false|eq|ne|gte|gt|lt|lte|regex|semver-gt|semver-eq|semver-gte|semver-gt|semver-lt|semver-lte
+
+    # The Second operand of the condition
+    # Optional - Based on operator  (is-undefined, is-true, is-false)
+    operand: String|Number|[String]
+```
+
+# See Also:
+- Using Roxy docker image for Microservices Automated Testing and Local development [here](https://support.rollout.io/docs/microservices-automated-testing-and-local-development)
+- Configuration as Code advantages [here](https://support.rollout.io/docs/configuration-as-code#section-advantages-of-configuration-as-code)
+- Integration walkthrough [here](https://support.rollout.io/docs/configuration-as-code#section-connecting-to-github-cloud)
+
+
+Please contact support@rollout.io for any issues questions or suggestions you might have
